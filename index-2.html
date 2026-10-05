@@ -1,0 +1,648 @@
+<!doctype html>
+<html lang="id">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<meta name="theme-color" content="#0B6B58">
+<meta name="mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-title" content="Kasir Konter">
+<link rel="manifest" href="manifest.json">
+<link rel="icon" href="icon-192.png">
+<link rel="apple-touch-icon" href="icon-192.png">
+<style>
+/* Dasar halaman (di versi artifact ini disediakan otomatis) */
+:root{color-scheme:light;padding-block:env(safe-area-inset-top,0px) env(safe-area-inset-bottom,0px)}
+body{margin:0}
+[hidden]{display:none!important}
+</style>
+<title>Kasir Konter</title>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=IBM+Plex+Mono:wght@500;600&family=Plus+Jakarta+Sans:wght@400;500;600;700;800&display=swap">
+<style>
+/* Tata letak: satu kolom ala struk. Dua kartu saldo di atas, form transaksi di tengah, menu di bawah. */
+:root{
+  --bg:#EBF0EE;
+  --surface:#FFFFFF;
+  --ink:#13201D;
+  --muted:#5B6C68;
+  --line:#D3DCD9;
+  --accent:#0B6B58;
+  --accent-ink:#FFFFFF;
+  --accent-soft:#D9EEE8;
+  --in:#0A7A47;
+  --out:#B3302A;
+  --warn-bg:#FFF1D6;
+  --warn-ink:#6B4600;
+  --font-body:'Plus Jakarta Sans',system-ui,-apple-system,'Segoe UI',sans-serif;
+  --font-num:'IBM Plex Mono',ui-monospace,'SFMono-Regular',Menlo,monospace;
+}
+@media (prefers-color-scheme: dark){
+  :root:not([data-theme="light"]){
+    --bg:#0E1614;--surface:#16211F;--ink:#E5EEEB;--muted:#93A5A0;--line:#273734;
+    --accent:#4CC9AA;--accent-ink:#06211B;--accent-soft:#1A332E;
+    --in:#4FD18C;--out:#FF8A80;--warn-bg:#3A2E10;--warn-ink:#F3D58A;
+    color-scheme:dark;
+  }
+}
+:root[data-theme="dark"]{
+  --bg:#0E1614;--surface:#16211F;--ink:#E5EEEB;--muted:#93A5A0;--line:#273734;
+  --accent:#4CC9AA;--accent-ink:#06211B;--accent-soft:#1A332E;
+  --in:#4FD18C;--out:#FF8A80;--warn-bg:#3A2E10;--warn-ink:#F3D58A;
+  color-scheme:dark;
+}
+
+*{box-sizing:border-box}
+body{background:var(--bg);color:var(--ink);font-family:var(--font-body);font-size:15px;line-height:1.45}
+.app{max-width:520px;margin:0 auto;padding-inline:16px;padding-block:18px 120px}
+h1,h2,h3,p,dl,dd{margin:0}
+button,input,select,textarea{font:inherit;color:inherit}
+:focus-visible{outline:2px solid var(--accent);outline-offset:2px}
+
+.top{display:flex;justify-content:space-between;align-items:baseline;gap:4px 12px;flex-wrap:wrap;margin-bottom:14px}
+.top h1{font-size:1.3rem;font-weight:800;letter-spacing:-.01em}
+.top .tgl{color:var(--muted);font-size:.85rem}
+
+.label{font-size:.7rem;font-weight:700;letter-spacing:.08em;text-transform:uppercase;color:var(--muted)}
+.angka{font-family:var(--font-num);font-variant-numeric:tabular-nums;font-weight:600}
+.plus{color:var(--in)}
+.minus{color:var(--out)}
+.rp{font-size:.62em;color:var(--muted);margin-right:.3em;font-weight:500}
+
+.banner{background:var(--warn-bg);color:var(--warn-ink);border-radius:10px;padding:10px 12px;margin-bottom:14px;font-size:.85rem;display:flex;gap:8px 12px;align-items:center;justify-content:space-between;flex-wrap:wrap}
+.banner button{background:transparent;border:1px solid currentColor;border-radius:8px;padding:6px 10px;font-weight:600;font-size:.8rem;cursor:pointer}
+
+.kartu{background:var(--surface);border:1px solid var(--line);border-radius:14px;padding:14px}
+.saldo-grid{display:grid;grid-template-columns:1fr 1fr;gap:12px}
+.saldo-grid .kartu{min-width:0}
+.besar{font-size:clamp(1.05rem,5vw,1.4rem);margin-top:6px;overflow-wrap:anywhere}
+
+.total-aset{display:flex;justify-content:space-between;align-items:baseline;gap:8px;padding:12px 2px 10px;border-bottom:1px dashed var(--line);font-weight:600}
+.hari-ini{display:grid;grid-template-columns:repeat(3,1fr);gap:8px;padding:12px 2px 18px}
+.hari-ini div{min-width:0}
+.hari-ini dd{margin-top:2px;font-size:.95rem;overflow-wrap:anywhere}
+
+.panel h2{font-size:1rem;font-weight:700;margin-bottom:12px}
+.jenis{display:grid;grid-template-columns:1fr 1fr;gap:8px;margin-bottom:14px}
+.jenis button{border:1px solid var(--line);background:var(--bg);border-radius:10px;padding:10px 8px;font-weight:600;font-size:.9rem;cursor:pointer}
+.jenis button[aria-pressed="true"]{background:var(--accent);color:var(--accent-ink);border-color:var(--accent)}
+
+.field{display:flex;flex-direction:column;gap:5px;margin-bottom:12px}
+.field label{font-size:.8rem;font-weight:600;color:var(--muted)}
+.field input,.field select,.field textarea{width:100%;min-width:0;background:var(--bg);border:1px solid var(--line);border-radius:10px;padding:11px 12px;font-size:16px}
+.rp-input{display:flex;align-items:center;background:var(--bg);border:1px solid var(--line);border-radius:10px}
+.rp-input span{padding-left:12px;color:var(--muted);font-family:var(--font-num);font-size:.9rem}
+.rp-input input{border:0;background:transparent;font-family:var(--font-num);font-weight:600;padding-left:8px}
+.rp-input:focus-within{outline:2px solid var(--accent);outline-offset:2px}
+.rp-input input:focus-visible{outline:none}
+
+.efek{border-top:1px dashed var(--line);margin-top:4px;padding-top:12px;margin-bottom:14px}
+.efek-baris{display:flex;justify-content:space-between;gap:8px;padding:3px 0;font-size:.9rem}
+.efek-sesudah{margin-top:8px;font-size:.78rem;color:var(--muted)}
+.peringatan{background:var(--warn-bg);color:var(--warn-ink);border-radius:8px;padding:8px 10px;margin-top:8px;font-size:.85rem}
+
+.btn{display:block;width:100%;border:0;border-radius:12px;padding:13px;font-weight:700;cursor:pointer;background:var(--accent);color:var(--accent-ink);font-size:1rem}
+.btn:disabled{opacity:.4;cursor:not-allowed}
+.btn.sekunder{background:var(--bg);color:var(--ink);border:1px solid var(--line)}
+.btn-baris{display:grid;grid-template-columns:1fr 1fr;gap:8px;margin-top:8px}
+
+.hari{font-size:.75rem;font-weight:700;letter-spacing:.06em;text-transform:uppercase;color:var(--muted);padding:18px 2px 6px}
+.trx{display:flex;justify-content:space-between;gap:12px;padding:10px 2px;border-bottom:1px dashed var(--line)}
+.trx-kiri{min-width:0}
+.trx-ket{font-weight:600;overflow-wrap:anywhere}
+.trx-meta{font-size:.78rem;color:var(--muted)}
+.trx-kanan{text-align:right;font-size:.82rem;flex-shrink:0}
+.hapus{margin-top:4px;background:transparent;border:0;color:var(--muted);font-size:.75rem;text-decoration:underline;cursor:pointer;padding:2px 0}
+.hapus.siap{color:var(--out);font-weight:700}
+.kosong{color:var(--muted);padding:24px 2px}
+
+.judul-bagian{font-size:1rem;font-weight:700;margin:4px 2px 10px}
+.neraca{display:grid;grid-template-columns:1fr auto;gap:6px 12px;font-size:.9rem}
+.neraca .total{font-weight:700;border-top:1px solid var(--line);padding-top:6px}
+.neraca h3{grid-column:1/-1;font-size:.7rem;letter-spacing:.08em;text-transform:uppercase;color:var(--muted);margin-top:8px}
+.neraca h3:first-child{margin-top:0}
+.seimbang{margin-top:10px;font-size:.8rem;color:var(--in);font-weight:600}
+.tabel-wrap{overflow-x:auto;margin-top:6px}
+table{width:100%;border-collapse:collapse;font-size:.82rem}
+th{font-size:.68rem;letter-spacing:.06em;text-transform:uppercase;color:var(--muted);text-align:right;padding:6px 4px;font-weight:700}
+td{padding:9px 4px;text-align:right;border-top:1px dashed var(--line)}
+th:first-child,td:first-child{text-align:left}
+.catatan{font-size:.78rem;color:var(--muted);margin-top:10px}
+
+.field textarea{font-family:var(--font-num);font-size:12px;min-height:120px;resize:vertical}
+
+nav.menu{position:fixed;left:0;right:0;bottom:0;background:var(--surface);border-top:1px solid var(--line);display:grid;grid-template-columns:repeat(4,1fr);padding-bottom:env(safe-area-inset-bottom,0px);z-index:5}
+nav.menu button{background:transparent;border:0;border-top:3px solid transparent;padding:12px 4px 13px;font-weight:600;font-size:.82rem;color:var(--muted);cursor:pointer}
+nav.menu button[aria-current="page"]{color:var(--accent);border-top-color:var(--accent)}
+
+.toast{position:fixed;left:50%;transform:translateX(-50%);bottom:calc(76px + env(safe-area-inset-bottom,0px));background:var(--ink);color:var(--bg);padding:9px 16px;border-radius:999px;font-size:.85rem;font-weight:600;z-index:6;max-width:90%;text-align:center}
+
+@media (prefers-reduced-motion: no-preference){
+  .toast{animation:muncul .18s ease-out}
+  @keyframes muncul{from{opacity:0;transform:translate(-50%,6px)}to{opacity:1;transform:translate(-50%,0)}}
+}
+</style>
+</head>
+<body>
+
+<div class="app">
+  <header class="top">
+    <h1>Kasir Konter</h1>
+    <p class="tgl" id="tglHari"></p>
+  </header>
+
+  <div class="banner" id="banner" hidden>
+    <span>Ini data contoh supaya kamu bisa lihat cara kerjanya.</span>
+    <button type="button" data-tab="atur">Mulai dari nol</button>
+  </div>
+  <div class="banner" id="bannerSimpan" hidden>
+    <span>Browser ini tidak mengizinkan penyimpanan. Data akan hilang kalau halaman ditutup. Salin backup di Pengaturan.</span>
+  </div>
+
+  <!-- ===== TAB KASIR ===== -->
+  <section id="tab-kasir">
+    <div class="saldo-grid">
+      <div class="kartu">
+        <p class="label">Kas laci</p>
+        <p class="angka besar" id="vKas"></p>
+      </div>
+      <div class="kartu">
+        <p class="label">Saldo jual</p>
+        <p class="angka besar" id="vSaldo"></p>
+      </div>
+    </div>
+    <p class="total-aset"><span class="label">Total aset</span><span class="angka" id="vTotal"></span></p>
+    <dl class="hari-ini">
+      <div><dt class="label">Margin hari ini</dt><dd class="angka" id="vMargin"></dd></div>
+      <div><dt class="label">Pengeluaran</dt><dd class="angka" id="vKeluar"></dd></div>
+      <div><dt class="label">Laba bersih</dt><dd class="angka" id="vLaba"></dd></div>
+    </dl>
+
+    <form class="kartu panel" id="formTrx" autocomplete="off">
+      <h2>Catat transaksi</h2>
+      <div class="jenis" id="pilihJenis">
+        <button type="button" data-jenis="jual" aria-pressed="true">Jual saldo</button>
+        <button type="button" data-jenis="tarik" aria-pressed="false">Tarik tunai</button>
+        <button type="button" data-jenis="isi" aria-pressed="false">Isi saldo</button>
+        <button type="button" data-jenis="keluar" aria-pressed="false">Pengeluaran</button>
+      </div>
+      <div id="formFields"></div>
+      <div class="efek" id="efek" aria-live="polite"></div>
+      <button class="btn" type="submit" id="btnSimpan">Simpan transaksi</button>
+    </form>
+  </section>
+
+  <!-- ===== TAB RIWAYAT ===== -->
+  <section id="tab-riwayat" hidden>
+    <h2 class="judul-bagian">Riwayat transaksi</h2>
+    <div id="listRiwayat"></div>
+  </section>
+
+  <!-- ===== TAB LAPORAN ===== -->
+  <section id="tab-laporan" hidden>
+    <h2 class="judul-bagian">Neraca sederhana</h2>
+    <div class="kartu">
+      <div class="neraca" id="neraca"></div>
+    </div>
+    <h2 class="judul-bagian" style="margin-top:22px">Arus kas harian</h2>
+    <div class="kartu">
+      <div class="tabel-wrap" id="tabelHarian"></div>
+      <p class="catatan">Kas masuk dan keluar dihitung bersih per transaksi. Laba = margin dikurangi pengeluaran.</p>
+    </div>
+  </section>
+
+  <!-- ===== TAB PENGATURAN ===== -->
+  <section id="tab-atur" hidden>
+    <h2 class="judul-bagian">Modal awal</h2>
+    <div class="kartu panel">
+      <div class="field">
+        <label for="m-kas">Uang cash di laci saat mulai</label>
+        <div class="rp-input"><span>Rp</span><input id="m-kas" data-rp inputmode="numeric" placeholder="0"></div>
+      </div>
+      <div class="field">
+        <label for="m-saldo">Saldo jual saat mulai</label>
+        <div class="rp-input"><span>Rp</span><input id="m-saldo" data-rp inputmode="numeric" placeholder="0"></div>
+      </div>
+      <button class="btn" type="button" id="btnReset">Simpan modal dan mulai dari nol</button>
+      <p class="catatan">Semua transaksi yang ada sekarang akan dihapus.</p>
+    </div>
+
+    <h2 class="judul-bagian" style="margin-top:22px">Backup data</h2>
+    <div class="kartu panel">
+      <p class="catatan" style="margin-top:0;margin-bottom:10px">Data tersimpan di browser HP ini saja. Kalau data browser dibersihkan, data hilang. Salin teks di bawah dan simpan di catatan atau WhatsApp kamu secara berkala.</p>
+      <div class="field">
+        <label for="backup">Teks backup</label>
+        <textarea id="backup" spellcheck="false"></textarea>
+      </div>
+      <div class="btn-baris">
+        <button class="btn sekunder" type="button" id="btnSalin">Salin</button>
+        <button class="btn sekunder" type="button" id="btnPulih">Pulihkan dari teks</button>
+      </div>
+      <p class="catatan">Untuk memulihkan: tempel teks backup ke kotak di atas, lalu tekan Pulihkan.</p>
+    </div>
+  </section>
+</div>
+
+<div class="toast" id="toast" role="status" hidden></div>
+
+<nav class="menu" aria-label="Menu utama">
+  <button type="button" data-tab="kasir" aria-current="page">Kasir</button>
+  <button type="button" data-tab="riwayat">Riwayat</button>
+  <button type="button" data-tab="laporan">Laporan</button>
+  <button type="button" data-tab="atur">Pengaturan</button>
+</nav>
+
+<script>
+/* =====================================================================
+   KASIR KONTER - Tahap 1
+   Ide utama: simpan SEMUA kejadian sebagai daftar transaksi.
+   Kas laci, saldo jual, margin, dan laporan dihitung dari daftar itu,
+   jadi menghapus satu transaksi otomatis membetulkan semua angka.
+   ===================================================================== */
+
+const KEY = 'kasir-konter-v1';
+const $ = (s) => document.querySelector(s);
+
+/* ---------- Alat bantu format ---------- */
+const pad = (n) => String(n).padStart(2, '0');
+const titik = (n) => String(Math.abs(Math.round(n))).replace(/\B(?=(\d{3})+(?!\d))/g, '.');
+const rp = (n) => (n < 0 ? '−' : '') + 'Rp ' + titik(n);
+const tanda = (n) => (n === 0 ? 'Rp 0' : (n > 0 ? '+ ' : '− ') + 'Rp ' + titik(n));
+const tandaKecil = (n) => (n === 0 ? '0' : (n > 0 ? '+' : '−') + titik(n));
+const kelas = (n) => (n > 0 ? 'plus' : n < 0 ? 'minus' : '');
+const angka = (s) => parseInt(String(s || '').replace(/\D/g, ''), 10) || 0;
+const esc = (s) => String(s).replace(/[&<>"']/g, (c) => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c]));
+
+const HARI = ['Minggu', 'Senin', 'Selasa', 'Rabu', 'Kamis', 'Jumat', 'Sabtu'];
+const BULAN = ['Jan', 'Feb', 'Mar', 'Apr', 'Mei', 'Jun', 'Jul', 'Agu', 'Sep', 'Okt', 'Nov', 'Des'];
+const tglStr = (d = new Date()) => d.getFullYear() + '-' + pad(d.getMonth() + 1) + '-' + pad(d.getDate());
+const jamStr = (d = new Date()) => pad(d.getHours()) + ':' + pad(d.getMinutes());
+function tglCantik(s) {
+  const [y, m, d] = s.split('-').map(Number);
+  return HARI[new Date(y, m - 1, d).getDay()] + ', ' + d + ' ' + BULAN[m - 1] + ' ' + y;
+}
+function tglPendek(s) {
+  const [, m, d] = s.split('-').map(Number);
+  return d + ' ' + BULAN[m - 1];
+}
+
+/* ---------- Rumus transaksi ---------- */
+// <hitung>
+// Setiap transaksi menghasilkan perubahan pada: kas laci (dKas), saldo jual (dSaldo),
+// margin (untung kotor), pengeluaran (keluar), dan selisih beli saldo (selisih).
+function hitung(jenis, v) {
+  const r = { dKas: 0, dSaldo: 0, margin: 0, keluar: 0, selisih: 0 };
+  if (jenis === 'jual') {
+    // Pelanggan bayar tunai, saldo kamu terpotong.
+    r.dKas = v.harga;
+    r.dSaldo = -v.potong;
+    r.margin = v.harga - v.potong;
+  } else if (jenis === 'tarik') {
+    // Pelanggan transfer ke kamu (saldo masuk), kamu kasih uang tunai.
+    r.dSaldo = v.nominal;
+    r.margin = v.biaya;
+    if (v.cara === 'tunai') {
+      r.dKas = -v.nominal + v.biaya; // biaya dibayar cash, masuk laci
+    } else {
+      r.dKas = -v.nominal;
+      r.dSaldo += v.biaya; // biaya ikut ditransfer, masuk saldo
+    }
+  } else if (jenis === 'isi') {
+    // Beli saldo dari supplier, bayar pakai uang laci.
+    r.dKas = -v.bayar;
+    r.dSaldo = v.nominal;
+    r.selisih = v.nominal - v.bayar;
+  } else {
+    r.dKas = -v.nominal;
+    r.keluar = v.nominal;
+  }
+  return r;
+}
+// </hitung>
+
+const JENIS = {
+  jual:   { nama: 'Jual saldo',  ket: 'Contoh: Pulsa 10rb 0812xxxx', f: [['potong', 'Saldo terpotong (modal)'], ['harga', 'Harga jual ke pelanggan']] },
+  tarik:  { nama: 'Tarik tunai', ket: 'Contoh: Tarik tunai BRI',     f: [['nominal', 'Uang tunai yang diberikan'], ['biaya', 'Biaya admin']], cara: true },
+  isi:    { nama: 'Isi saldo',   ket: 'Contoh: Top up dari supplier', f: [['nominal', 'Saldo yang masuk'], ['bayar', 'Uang yang dibayar (dari laci)']] },
+  keluar: { nama: 'Pengeluaran', ket: 'Contoh: Plastik, listrik, bensin', f: [['nominal', 'Jumlah pengeluaran']] }
+};
+
+/* ---------- Data ---------- */
+let storageOk = true;
+function load() {
+  try {
+    const s = localStorage.getItem(KEY);
+    if (s) {
+      const d = JSON.parse(s);
+      if (d && d.modal && Array.isArray(d.tx)) return d;
+    }
+  } catch (e) { storageOk = false; }
+  return null;
+}
+function simpan() {
+  try { localStorage.setItem(KEY, JSON.stringify(state)); } catch (e) { storageOk = false; }
+}
+
+function buatTx(offsetHari, jam, jenis, ket, v) {
+  const d = new Date();
+  d.setDate(d.getDate() - offsetHari);
+  const [hh, mm] = jam.split(':').map(Number);
+  d.setHours(hh, mm, 0, 0);
+  return Object.assign({ id: 'c' + offsetHari + jam, ts: d.getTime(), tgl: tglStr(d), jam, jenis, ket }, hitung(jenis, v));
+}
+function dataContoh() {
+  return {
+    contoh: true,
+    modal: { kas: 1500000, saldo: 2000000 },
+    tx: [
+      buatTx(1, '08:30', 'isi', 'Top up dari supplier', { nominal: 1000000, bayar: 995000 }),
+      buatTx(1, '10:30', 'jual', 'Pulsa 10rb', { potong: 9850, harga: 12000 }),
+      buatTx(1, '14:05', 'tarik', 'Tarik tunai BRI', { nominal: 500000, biaya: 5000, cara: 'tunai' }),
+      buatTx(1, '16:40', 'keluar', 'Plastik dan kertas struk', { nominal: 25000 }),
+      buatTx(0, '08:20', 'jual', 'Token PLN 50rb', { potong: 51500, harga: 54000 }),
+      buatTx(0, '09:45', 'tarik', 'Tarik tunai Dana', { nominal: 300000, biaya: 4000, cara: 'transfer' })
+    ]
+  };
+}
+
+let state = load() || dataContoh();
+let form = { jenis: 'jual' };
+let hapusId = null;
+let resetSiap = false;
+
+/* ---------- Ringkasan ---------- */
+function ringkas(daftar = state.tx) {
+  let kas = state.modal.kas, saldo = state.modal.saldo, margin = 0, keluar = 0, selisih = 0;
+  for (const t of daftar) {
+    kas += t.dKas; saldo += t.dSaldo; margin += t.margin; keluar += t.keluar; selisih += t.selisih;
+  }
+  return { kas, saldo, margin, keluar, selisih };
+}
+// Saldo kas dan saldo jual SAAT INI memakai semua transaksi;
+// margin dan pengeluaran HARI INI hanya memakai transaksi hari ini.
+function hariIni() {
+  const hr = tglStr();
+  let margin = 0, keluar = 0;
+  for (const t of state.tx) if (t.tgl === hr) { margin += t.margin; keluar += t.keluar; }
+  return { margin, keluar, laba: margin - keluar };
+}
+
+/* ---------- Tampilan: Kasir ---------- */
+function renderBeranda() {
+  const r = ringkas(), h = hariIni();
+  const rpHtml = (n) => '<span class="rp">Rp</span>' + (n < 0 ? '−' : '') + titik(n);
+  $('#tglHari').textContent = tglCantik(tglStr());
+  $('#vKas').innerHTML = rpHtml(r.kas);
+  $('#vSaldo').innerHTML = rpHtml(r.saldo);
+  $('#vTotal').textContent = rp(r.kas + r.saldo);
+  $('#vMargin').textContent = rp(h.margin);
+  $('#vKeluar').textContent = rp(h.keluar);
+  $('#vLaba').textContent = rp(h.laba);
+  $('#vLaba').className = 'angka ' + kelas(h.laba);
+  $('#banner').hidden = !state.contoh;
+  $('#bannerSimpan').hidden = storageOk;
+}
+
+function renderForm() {
+  const J = JENIS[form.jenis];
+  let h = '';
+  for (const [id, label] of J.f) {
+    h += '<div class="field"><label for="f-' + id + '">' + label + '</label>' +
+      '<div class="rp-input"><span>Rp</span><input id="f-' + id + '" data-rp inputmode="numeric" autocomplete="off" placeholder="0"></div></div>';
+  }
+  if (J.cara) {
+    h += '<div class="field"><label for="f-cara">Biaya admin dibayar lewat</label>' +
+      '<select id="f-cara"><option value="tunai">Tunai (masuk laci)</option><option value="transfer">Transfer (masuk saldo jual)</option></select></div>';
+  }
+  h += '<div class="field"><label for="f-ket">Catatan (boleh kosong)</label>' +
+    '<input id="f-ket" type="text" maxlength="60" autocomplete="off" placeholder="' + esc(J.ket) + '"></div>';
+  $('#formFields').innerHTML = h;
+  for (const b of document.querySelectorAll('#pilihJenis button')) {
+    b.setAttribute('aria-pressed', String(b.dataset.jenis === form.jenis));
+  }
+  updatePreview();
+}
+
+function bacaForm() {
+  const v = {};
+  for (const [id] of JENIS[form.jenis].f) v[id] = angka($('#f-' + id).value);
+  if (JENIS[form.jenis].cara) v.cara = $('#f-cara').value;
+  return v;
+}
+function lengkap(jenis, v) {
+  if (jenis === 'jual') return v.potong > 0 && v.harga > 0;
+  if (jenis === 'tarik') return v.nominal > 0;
+  if (jenis === 'isi') return v.nominal > 0 && v.bayar > 0;
+  return v.nominal > 0;
+}
+
+function updatePreview() {
+  const j = form.jenis, v = bacaForm(), h = hitung(j, v), r = ringkas();
+  const baris = (label, n) => '<div class="efek-baris"><span>' + label + '</span><span class="angka ' + kelas(n) + '">' + tanda(n) + '</span></div>';
+  let html = '<p class="label" style="margin-bottom:6px">Efek transaksi ini</p>';
+  html += baris('Kas laci', h.dKas) + baris('Saldo jual', h.dSaldo);
+  if (j === 'jual' || j === 'tarik') html += baris('Margin (untung)', h.margin);
+  if (j === 'isi') html += baris('Selisih beli (diskon)', h.selisih);
+  if (j === 'keluar') html += baris('Pengeluaran', -h.keluar);
+  html += '<p class="efek-sesudah">Sesudah: kas ' + rp(r.kas + h.dKas) + ' · saldo ' + rp(r.saldo + h.dSaldo) + '</p>';
+
+  const err = [];
+  if (r.kas + h.dKas < 0) err.push('Uang di laci tidak cukup untuk transaksi ini.');
+  if (r.saldo + h.dSaldo < 0) err.push('Saldo jual tidak cukup. Isi saldo dulu.');
+  for (const e of err) html += '<p class="peringatan">' + e + '</p>';
+
+  $('#efek').innerHTML = html;
+  $('#btnSimpan').disabled = !lengkap(j, v) || err.length > 0;
+}
+
+function simpanTransaksi(ev) {
+  ev.preventDefault();
+  const j = form.jenis, v = bacaForm();
+  if (!lengkap(j, v)) return;
+  const h = hitung(j, v);
+  const r = ringkas();
+  if (r.kas + h.dKas < 0 || r.saldo + h.dSaldo < 0) return;
+  const now = new Date();
+  const ket = $('#f-ket').value.trim() || JENIS[j].nama;
+  state.tx.push(Object.assign({ id: 't' + now.getTime() + Math.floor(Math.random() * 1000), ts: now.getTime(), tgl: tglStr(now), jam: jamStr(now), jenis: j, ket }, h));
+  simpan();
+  renderForm();
+  render();
+  toast('Tersimpan');
+}
+
+/* ---------- Tampilan: Riwayat ---------- */
+function renderRiwayat() {
+  const el = $('#listRiwayat');
+  const daftar = [...state.tx].sort((a, b) => b.ts - a.ts).slice(0, 300);
+  if (!daftar.length) {
+    el.innerHTML = '<p class="kosong">Belum ada transaksi. Catat yang pertama di menu Kasir.</p>';
+    return;
+  }
+  let h = '', tgl = '';
+  for (const t of daftar) {
+    if (t.tgl !== tgl) { tgl = t.tgl; h += '<h3 class="hari">' + tglCantik(tgl) + '</h3>'; }
+    h += '<div class="trx"><div class="trx-kiri"><p class="trx-ket">' + esc(t.ket) + '</p>' +
+      '<p class="trx-meta">' + t.jam + ' · ' + JENIS[t.jenis].nama + '</p></div>' +
+      '<div class="trx-kanan"><p class="angka ' + kelas(t.dKas) + '">Kas ' + tandaKecil(t.dKas) + '</p>' +
+      '<p class="angka ' + kelas(t.dSaldo) + '">Saldo ' + tandaKecil(t.dSaldo) + '</p>' +
+      '<button type="button" class="hapus' + (hapusId === t.id ? ' siap' : '') + '" data-hapus="' + t.id + '">' +
+      (hapusId === t.id ? 'Yakin hapus?' : 'Hapus') + '</button></div></div>';
+  }
+  el.innerHTML = h;
+}
+
+/* ---------- Tampilan: Laporan ---------- */
+function renderLaporan() {
+  const r = ringkas();
+  const laba = r.margin - r.keluar;
+  const totalAset = r.kas + r.saldo;
+  const modal = state.modal.kas + state.modal.saldo;
+  const sumber = modal + laba + r.selisih;
+  const b = (label, n, cls) => '<span' + (cls ? ' class="' + cls + '"' : '') + '>' + label + '</span><span class="angka ' + (cls || '') + '">' + rp(n) + '</span>';
+
+  let h = '<h3>Aset (yang kamu pegang)</h3>' + b('Kas laci', r.kas) + b('Saldo jual', r.saldo) + b('Total aset', totalAset, 'total');
+  h += '<h3>Asal aset</h3>' + b('Modal awal', modal) + b('Margin penjualan', r.margin) + b('Pengeluaran', -r.keluar) + b('Selisih beli saldo', r.selisih) + b('Total asal', sumber, 'total');
+  h += '<p class="seimbang" style="grid-column:1/-1">' + (totalAset === sumber ? 'Neraca seimbang: aset sama dengan asal aset.' : 'Neraca tidak seimbang. Periksa transaksi.') + '</p>';
+  $('#neraca').innerHTML = h;
+
+  const per = {};
+  for (const t of state.tx) {
+    const d = per[t.tgl] || (per[t.tgl] = { masuk: 0, keluar: 0, margin: 0, peng: 0 });
+    if (t.dKas > 0) d.masuk += t.dKas; else d.keluar += -t.dKas;
+    d.margin += t.margin; d.peng += t.keluar;
+  }
+  const hari = Object.keys(per).sort().reverse().slice(0, 14);
+  if (!hari.length) {
+    $('#tabelHarian').innerHTML = '<p class="kosong" style="padding:8px 0">Belum ada data.</p>';
+    return;
+  }
+  let t = '<table><thead><tr><th>Tanggal</th><th>Kas masuk</th><th>Kas keluar</th><th>Laba</th></tr></thead><tbody>';
+  for (const k of hari) {
+    const d = per[k], lb = d.margin - d.peng;
+    t += '<tr><td>' + tglPendek(k) + '</td><td class="angka plus">' + titik(d.masuk) + '</td><td class="angka minus">' + titik(d.keluar) + '</td><td class="angka ' + kelas(lb) + '">' + (lb < 0 ? '−' : '') + titik(lb) + '</td></tr>';
+  }
+  $('#tabelHarian').innerHTML = t + '</tbody></table>';
+}
+
+/* ---------- Tampilan: Pengaturan ---------- */
+function renderAtur() {
+  $('#m-kas').value = titik(state.modal.kas);
+  $('#m-saldo').value = titik(state.modal.saldo);
+  $('#backup').value = JSON.stringify(state);
+  resetSiap = false;
+  $('#btnReset').textContent = 'Simpan modal dan mulai dari nol';
+}
+function resetNol() {
+  if (!resetSiap) {
+    resetSiap = true;
+    $('#btnReset').textContent = 'Yakin? Semua transaksi akan dihapus';
+    return;
+  }
+  state = { contoh: false, modal: { kas: angka($('#m-kas').value), saldo: angka($('#m-saldo').value) }, tx: [] };
+  simpan();
+  resetSiap = false;
+  renderAtur();
+  renderForm();
+  render();
+  toast('Siap. Mulai dari nol.');
+}
+async function salinBackup() {
+  const ta = $('#backup');
+  try {
+    await navigator.clipboard.writeText(ta.value);
+    toast('Backup disalin');
+  } catch (e) {
+    ta.focus(); ta.select();
+    toast('Teks sudah dipilih. Salin lewat menu HP.');
+  }
+}
+function pulihkan() {
+  try {
+    const d = JSON.parse($('#backup').value);
+    const ok = d && d.modal && Number.isFinite(d.modal.kas) && Number.isFinite(d.modal.saldo) && Array.isArray(d.tx) &&
+      d.tx.every((t) => t && typeof t.id === 'string' && Number.isFinite(t.ts) && typeof t.tgl === 'string' && JENIS[t.jenis] &&
+        [t.dKas, t.dSaldo, t.margin, t.keluar, t.selisih].every(Number.isFinite));
+    if (!ok) throw new Error('bentuk data salah');
+    state = { contoh: !!d.contoh, modal: { kas: d.modal.kas, saldo: d.modal.saldo }, tx: d.tx };
+    simpan();
+    renderAtur();
+    renderForm();
+    render();
+    toast('Data dipulihkan');
+  } catch (e) {
+    toast('Teks backup tidak valid');
+  }
+}
+
+/* ---------- Navigasi dan notifikasi ---------- */
+function tab(nama) {
+  for (const s of document.querySelectorAll('section[id^="tab-"]')) s.hidden = s.id !== 'tab-' + nama;
+  for (const b of document.querySelectorAll('nav.menu button')) {
+    if (b.dataset.tab === nama) b.setAttribute('aria-current', 'page'); else b.removeAttribute('aria-current');
+  }
+  if (nama === 'atur') renderAtur();
+  hapusId = null;
+  render();
+  window.scrollTo(0, 0);
+}
+let toastTimer;
+function toast(teks) {
+  const el = $('#toast');
+  el.textContent = teks;
+  el.hidden = false;
+  clearTimeout(toastTimer);
+  toastTimer = setTimeout(() => { el.hidden = true; }, 2200);
+}
+function render() {
+  renderBeranda();
+  renderRiwayat();
+  renderLaporan();
+  if (!$('#tab-kasir').hidden) updatePreview();
+}
+
+/* ---------- Event ---------- */
+document.addEventListener('input', (e) => {
+  const el = e.target;
+  if (el.matches('input[data-rp]')) {
+    const n = angka(el.value);
+    el.value = n ? titik(n) : '';
+  }
+  if (el.closest('#formFields')) updatePreview();
+});
+document.addEventListener('change', (e) => { if (e.target.closest('#formFields')) updatePreview(); });
+document.addEventListener('click', (e) => {
+  const t = e.target.closest('[data-tab],[data-jenis],[data-hapus],#btnReset,#btnSalin,#btnPulih');
+  if (!t) return;
+  if (t.dataset.tab) return tab(t.dataset.tab);
+  if (t.dataset.jenis) { form.jenis = t.dataset.jenis; return renderForm(); }
+  if (t.dataset.hapus) {
+    if (hapusId === t.dataset.hapus) {
+      state.tx = state.tx.filter((x) => x.id !== hapusId);
+      hapusId = null;
+      simpan();
+      render();
+      return toast('Transaksi dihapus');
+    }
+    hapusId = t.dataset.hapus;
+    return renderRiwayat();
+  }
+  if (t.id === 'btnReset') return resetNol();
+  if (t.id === 'btnSalin') return salinBackup();
+  if (t.id === 'btnPulih') return pulihkan();
+});
+$('#formTrx').addEventListener('submit', simpanTransaksi);
+
+/* ---------- Mulai ---------- */
+try { localStorage.setItem(KEY + '-tes', '1'); localStorage.removeItem(KEY + '-tes'); } catch (e) { storageOk = false; }
+simpan();
+renderForm();
+render();
+
+/* ---------- Mode offline dan bisa di-install ---------- */
+if ('serviceWorker' in navigator) {
+  window.addEventListener('load', () => { navigator.serviceWorker.register('sw.js').catch(() => {}); });
+}
+</script>
+
+</body>
+</html>
